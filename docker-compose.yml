@@ -1,0 +1,23 @@
+version: '3.6'
+
+services:
+  postgres:
+    image: postgres:12
+    environment:
+      POSTGRES_PASSWORD: SLurPy0RIfice74
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: pg_isready
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  pgweb:
+    image: sosedoff/pgweb
+    depends_on:
+      - postgres
+    restart: on-failure
+    environment:
+      DATABASE_URL: postgres://postgres:SLurPy0RIfice74@postgres:5432/postgres?sslmode=disable
+    ports:
+      - "8091:8081"
