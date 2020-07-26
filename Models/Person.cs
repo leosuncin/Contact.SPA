@@ -20,5 +20,6 @@ namespace Contact.Models
         public int Age { get; set; }
         public List<Address> Addresses { get; set; } = new List<Address>();
         public List<Email> EmailAddresses { get; set; } = new List<Email>();
+        public List<Phone> PhoneNumbers { get; set; } = new List<Phone>();
     }
 }
