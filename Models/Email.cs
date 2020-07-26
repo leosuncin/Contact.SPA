@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Contact.Models
 {
@@ -8,6 +9,8 @@ namespace Contact.Models
         public int Id { get; set; }
 
         [Required]
+        [MaxLength(200)]
+        [Column(TypeName = "varchar(200)")]
         public string Address { get; set; }
     }
 }
