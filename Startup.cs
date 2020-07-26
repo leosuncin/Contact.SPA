@@ -26,7 +26,11 @@ namespace Contact.SPA
             // Define DB connection string from environment variable (DB_CONNECTION_STRING) or appsettings.json
             string connectionString = Configuration["DB_CONNECTION_STRING"] ?? Configuration.GetConnectionString("Default");
 
-            services.AddDbContext<ContactContext>(options => options.UseNpgsql(connectionString));
+            services.AddDbContext<ContactContext>(options =>
+            {
+                options.UseNpgsql(connectionString)
+                .UseSnakeCaseNamingConvention();
+            });
             services.AddControllersWithViews();
 
             // In production, the React files will be served from this directory
