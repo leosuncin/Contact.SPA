@@ -12,6 +12,9 @@ namespace Contact.Models
         [MaxLength(200)]
         public string StreetAddress { get; set; }
 
+        [MaxLength(50)]
+        public string Suite { get; set; }
+
         [Required]
         [MaxLength(100)]
         public string City { get; set; }
