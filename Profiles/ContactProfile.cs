@@ -12,6 +12,8 @@ namespace Contact.Profiles
             CreateMap<EmailCreateDto, Email>();
             CreateMap<AddressCreateDto, Address>();
             CreateMap<PersonCreateDto, Person>();
+            CreateMap<PersonUpdateDto, Person>();
+            CreateMap<Person, PersonUpdateDto>();
         }
     }
 }
