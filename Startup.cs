@@ -1,3 +1,5 @@
+using System;
+using AutoMapper;
 using Contact.Data;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -31,6 +33,7 @@ namespace Contact.SPA
                 options.UseNpgsql(connectionString)
                 .UseSnakeCaseNamingConvention();
             });
+            services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
             services.AddControllersWithViews();
 
             // In production, the React files will be served from this directory
