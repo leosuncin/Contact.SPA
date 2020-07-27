@@ -1,91 +1,94 @@
-import { Action, Reducer } from 'redux';
-import { AppThunkAction } from './';
+import {
+  createAsyncThunk,
+  createEntityAdapter,
+  createSlice,
+  EntityState,
+  PayloadAction,
+} from '@reduxjs/toolkit';
 
 // -----------------
 // STATE - This defines the type of data maintained in the Redux store.
 
-export interface WeatherForecastsState {
-    isLoading: boolean;
-    startDateIndex?: number;
-    forecasts: WeatherForecast[];
-}
-
 export interface WeatherForecast {
-    date: string;
-    temperatureC: number;
-    temperatureF: number;
-    summary: string;
+  date: string;
+  temperatureC: number;
+  temperatureF: number;
+  summary: string;
 }
 
-// -----------------
-// ACTIONS - These are serializable (hence replayable) descriptions of state transitions.
-// They do not themselves have any side-effects; they just describe something that is going to happen.
-
-interface RequestWeatherForecastsAction {
-    type: 'REQUEST_WEATHER_FORECASTS';
-    startDateIndex: number;
+export interface WeatherForecastsState extends EntityState<WeatherForecast> {
+  isLoading: boolean;
+  startDateIndex?: number;
 }
 
-interface ReceiveWeatherForecastsAction {
-    type: 'RECEIVE_WEATHER_FORECASTS';
-    startDateIndex: number;
-    forecasts: WeatherForecast[];
-}
+type FulfilledRequestWeatherForecasts = {
+  startDateIndex: number;
+  forecasts: WeatherForecast[];
+};
 
-// Declare a 'discriminated union' type. This guarantees that all references to 'type' properties contain one of the
-// declared type strings (and not any other arbitrary string).
-type KnownAction = RequestWeatherForecastsAction | ReceiveWeatherForecastsAction;
+export const WEATHER_FORECASTS_FEATURE_KEY = 'weatherForecasts';
+
+export const requestWeatherForecasts = createAsyncThunk<
+  FulfilledRequestWeatherForecasts,
+  number
+>(
+  'weatherForecasts/request',
+  async (startDateIndex: number, thunkApi) => {
+    const response = await fetch(`weatherforecast`, {
+      signal: thunkApi.signal,
+    });
+    const forecasts: WeatherForecast[] = await response.json();
+
+    return { startDateIndex, forecasts };
+  },
+  {
+    condition(startDateIndex: number, thunkApi) {
+      const appState = thunkApi.getState() as WeatherForecastsState;
+
+      return startDateIndex !== appState.startDateIndex;
+    },
+  }
+);
+
+const forecastAdapter = createEntityAdapter<WeatherForecast>({
+  selectId: (forecast) => forecast.date,
+});
+
+const initialState: WeatherForecastsState = forecastAdapter.getInitialState({
+  isLoading: false,
+});
+
+const weatherForecastSlice = createSlice({
+  name: WEATHER_FORECASTS_FEATURE_KEY,
+  initialState,
+  reducers: {},
+  extraReducers: (builder) => {
+    builder.addCase(requestWeatherForecasts.pending, (state) => {
+      state.isLoading = true;
+    });
+    builder.addCase(
+      requestWeatherForecasts.fulfilled,
+      (state, action: PayloadAction<FulfilledRequestWeatherForecasts>) => {
+        state.startDateIndex = action.payload.startDateIndex;
+        state.isLoading = false;
+        forecastAdapter.setAll(state, action.payload.forecasts);
+      }
+    );
+    builder.addCase(requestWeatherForecasts.rejected, (state) => {
+      state.isLoading = false;
+    });
+  },
+});
+
+export const {
+  // ----------------
+  // REDUCER - For a given state and action, returns the new state. To support time travel, this must not mutate the old state.
+  reducer,
+} = weatherForecastSlice;
 
 // ----------------
 // ACTION CREATORS - These are functions exposed to UI components that will trigger a state transition.
 // They don't directly mutate state, but they can have external side-effects (such as loading data).
+export const actionCreators = { requestWeatherForecasts };
 
-export const actionCreators = {
-    requestWeatherForecasts: (startDateIndex: number): AppThunkAction<KnownAction> => (dispatch, getState) => {
-        // Only load data if it's something we don't already have (and are not already loading)
-        const appState = getState();
-        if (appState && appState.weatherForecasts && startDateIndex !== appState.weatherForecasts.startDateIndex) {
-            fetch(`weatherforecast`)
-                .then(response => response.json() as Promise<WeatherForecast[]>)
-                .then(data => {
-                    dispatch({ type: 'RECEIVE_WEATHER_FORECASTS', startDateIndex: startDateIndex, forecasts: data });
-                });
-
-            dispatch({ type: 'REQUEST_WEATHER_FORECASTS', startDateIndex: startDateIndex });
-        }
-    }
-};
-
-// ----------------
-// REDUCER - For a given state and action, returns the new state. To support time travel, this must not mutate the old state.
-
-const unloadedState: WeatherForecastsState = { forecasts: [], isLoading: false };
-
-export const reducer: Reducer<WeatherForecastsState> = (state: WeatherForecastsState | undefined, incomingAction: Action): WeatherForecastsState => {
-    if (state === undefined) {
-        return unloadedState;
-    }
-
-    const action = incomingAction as KnownAction;
-    switch (action.type) {
-        case 'REQUEST_WEATHER_FORECASTS':
-            return {
-                startDateIndex: action.startDateIndex,
-                forecasts: state.forecasts,
-                isLoading: true
-            };
-        case 'RECEIVE_WEATHER_FORECASTS':
-            // Only accept the incoming data if it matches the most recent request. This ensures we correctly
-            // handle out-of-order responses.
-            if (action.startDateIndex === state.startDateIndex) {
-                return {
-                    startDateIndex: action.startDateIndex,
-                    forecasts: action.forecasts,
-                    isLoading: false
-                };
-            }
-            break;
-    }
-
-    return state;
-};
+export const { selectAll: selectForecasts } = forecastAdapter.getSelectors();
