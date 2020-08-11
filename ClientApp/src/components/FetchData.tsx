@@ -1,45 +1,24 @@
 import * as React from 'react';
-import { connect } from 'react-redux';
-import { RouteComponentProps } from 'react-router';
+import { useDispatch, useSelector } from 'react-redux';
+import { RouteComponentProps, useParams } from 'react-router';
 import { Link } from 'react-router-dom';
-import { ApplicationState } from '../store';
-import * as WeatherForecastsStore from '../store/WeatherForecasts';
+import { ApplicationState } from '../store/createStore';
+import { WEATHER_FORECASTS_FEATURE_KEY, requestWeatherForecasts, selectForecasts } from '../store/WeatherForecasts';
 
 // At runtime, Redux will merge together...
-type WeatherForecastProps =
-  WeatherForecastsStore.WeatherForecastsState // ... state we've requested from the Redux store
-  & typeof WeatherForecastsStore.actionCreators // ... plus action creators we've requested
-  & RouteComponentProps<{ startDateIndex: string }>; // ... plus incoming routing parameters
+type WeatherForecastProps = RouteComponentProps<{ startDateIndex: string }>; // ... plus incoming routing parameters
 
+const FetchData: React.FC<WeatherForecastProps> = () => {
+  const dispatch = useDispatch();
+  const state = useSelector((state: ApplicationState) => state[WEATHER_FORECASTS_FEATURE_KEY])
+  const forecasts = selectForecasts(state);
+  const {startDateIndex} = useParams<{ startDateIndex: string }>()
 
-class FetchData extends React.PureComponent<WeatherForecastProps> {
-  // This method is called when the component is first added to the document
-  public componentDidMount() {
-    this.ensureDataFetched();
-  }
+  React.useEffect(() => {
+    dispatch(requestWeatherForecasts(parseInt(startDateIndex, 10) || 0));
+  }, [startDateIndex])
 
-  // This method is called when the route parameters change
-  public componentDidUpdate() {
-    this.ensureDataFetched();
-  }
-
-  public render() {
-    return (
-      <React.Fragment>
-        <h1 id="tabelLabel">Weather forecast</h1>
-        <p>This component demonstrates fetching data from the server and working with URL parameters.</p>
-        {this.renderForecastsTable()}
-        {this.renderPagination()}
-      </React.Fragment>
-    );
-  }
-
-  private ensureDataFetched() {
-    const startDateIndex = parseInt(this.props.match.params.startDateIndex, 10) || 0;
-    this.props.requestWeatherForecasts(startDateIndex);
-  }
-
-  private renderForecastsTable() {
+  function renderForecastsTable() {
     return (
       <table className='table table-striped' aria-labelledby="tabelLabel">
         <thead>
@@ -51,7 +30,7 @@ class FetchData extends React.PureComponent<WeatherForecastProps> {
           </tr>
         </thead>
         <tbody>
-          {this.props.forecasts.map((forecast: WeatherForecastsStore.WeatherForecast) =>
+          {forecasts.map((forecast) =>
             <tr key={forecast.date}>
               <td>{forecast.date}</td>
               <td>{forecast.temperatureC}</td>
@@ -64,21 +43,26 @@ class FetchData extends React.PureComponent<WeatherForecastProps> {
     );
   }
 
-  private renderPagination() {
-    const prevStartDateIndex = (this.props.startDateIndex || 0) - 5;
-    const nextStartDateIndex = (this.props.startDateIndex || 0) + 5;
+  function renderPagination() {
+    const prevStartDateIndex = (parseInt(startDateIndex) || 0) - 5;
+    const nextStartDateIndex = (parseInt(startDateIndex) || 0) + 5;
 
     return (
       <div className="d-flex justify-content-between">
         <Link className='btn btn-outline-secondary btn-sm' to={`/fetch-data/${prevStartDateIndex}`}>Previous</Link>
-        {this.props.isLoading && <span>Loading...</span>}
+        {state.isLoading && <span>Loading...</span>}
         <Link className='btn btn-outline-secondary btn-sm' to={`/fetch-data/${nextStartDateIndex}`}>Next</Link>
       </div>
     );
   }
+    return (
+      <React.Fragment>
+        <h1 id="tabelLabel">Weather forecast</h1>
+        <p>This component demonstrates fetching data from the server and working with URL parameters.</p>
+        {renderForecastsTable()}
+        {renderPagination()}
+      </React.Fragment>
+    );
 }
 
-export default connect(
-  (state: ApplicationState) => state.weatherForecasts, // Selects which state properties are merged into the component's props
-  WeatherForecastsStore.actionCreators // Selects which action creators are merged into the component's props
-)(FetchData as any);
+export default (FetchData);
